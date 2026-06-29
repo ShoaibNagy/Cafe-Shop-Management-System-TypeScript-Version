@@ -5,6 +5,7 @@ import app from "../../app/app";
 import ApplicationError, { ApplicationErrorType, ApplicationErrorProps } from '../../app/utils/applicationError';
 
 const pass = 'password123';
+const email = getRandomEmail();
 
 jest.mock('../../app/models/user');
 
@@ -12,7 +13,7 @@ const mockUser = {
     create: jest.fn().mockResolvedValue({
         username: 'Shoaib_Nagy350',
         password: pass,
-        email: 'shoaibwalid94@gmail.com',
+        email: email,
         firstName: 'Shoaib',
         lastName: 'Nagy',
         role: 'Customer',
@@ -21,7 +22,7 @@ const mockUser = {
         isActive: true,
     }),
     findOne: jest.fn().mockResolvedValue({
-        email: getRandomEmail(),
+        email: email,
         password: pass,
         username: 'Ahmed_El-Behairy',
     }),
@@ -43,28 +44,78 @@ describe('User API Tests', () => {
     describe('Registration', () => {
         describe('valid registration', () => {
             test('user should have valid username, email, password, first name, and last name', async () => {
-                const email = getRandomEmail();
                 const response = await request(app).post('/api/users/register').send({
                     email: email,
-                    username: 'testuser',
+                    username: 'Shoaib_Nagy350',
                     password: pass,
                     firstName: 'Shoaib',
                     lastName: 'Nagy',
                 });
                 expect(response.statusCode).toBe(201);
+                expect(response.body).toHaveProperty('message', 'User registered successfully');
+                expect(mockUser.create).toHaveBeenCalled();
+            });
 
-                const existingUser = await User.findOne();
+            it('should return 201 and user object for valid registration', async () => {
+                const email = getRandomEmail();
+                const response = await request(app).post('/api/users/register').send({
+                    email: email,
+                    username: 'validuser',
+                    password: pass,
+                    firstName: 'John',
+                    lastName: 'Doe',
+                });
+                expect(response.statusCode).toBe(201);
+                expect(response.body).toHaveProperty('user');
+                expect(response.body.user).toHaveProperty('username', 'Shoaib_Nagy350');
+                expect(response.body.user).toHaveProperty('email', 'shoaibwalid94@gmail.com');
+                expect(response.body.user).toHaveProperty('firstName', 'Shoaib');
+                expect(response.body.user).toHaveProperty('lastName', 'Nagy');
+                expect(response.body.user).toHaveProperty('isActive', true);
+            });
 
-                if(!existingUser){
-                    const user = await mockUser.save();
-                    expect(user).toHaveProperty('isActive', true);
-                    expect(user).toHaveProperty('username', '');
-                    expect(user).toHaveProperty('email', '');
-                    expect(mockUser.create).toHaveBeenCalled();
-                    expect(mockUser.save).toHaveBeenCalled();
-                }
+            test('should call User.create with correct parameters', async () => {
+                const email = getRandomEmail();
+                await request(app).post('/api/users/register').send({
+                    email: email,
+                    username: 'testuser2',
+                    password: pass,
+                    firstName: 'Jane',
+                    lastName: 'Smith',
+                });
+                expect(mockUser.create).toHaveBeenCalledWith(expect.objectContaining({
+                    email: email,
+                    username: 'testuser2',
+                    password: pass,
+                    firstName: 'Jane',
+                    lastName: 'Smith',
+                }));
+            });
 
-                
+            it('should set isActive to true for new user', async () => {
+                const email = getRandomEmail();
+                await request(app).post('/api/users/register').send({
+                    email: email,
+                    username: 'new_user',
+                    password: pass,
+                    firstName: 'Kasey',
+                    lastName: 'Jones',
+                });
+                const user = await mockUser.create.mock.results[0].value;
+                expect(user).toHaveProperty('isActive', true);
+            });
+
+            test('should return user role as Customer by default', async () => {
+                const email = getRandomEmail();
+                const response = await request(app).post('/api/users/register').send({
+                    email: email,
+                    username: 'new_customer',
+                    password: pass,
+                    firstName: 'Omar',
+                    lastName: 'Ahmed',
+                });
+                expect(response.statusCode).toBe(201);
+                expect(response.body.user).toHaveProperty('role', 'Customer');
             });
         });
     });
