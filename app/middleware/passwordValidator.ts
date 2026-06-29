@@ -1,8 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
-import { body, validationResult } from 'express-validator';
-
 function passwordValidator(password: string): boolean {
-    // Validate the password
     const hasProperLength = password.length >= 8 && password.length <= 16;
     const hasNumber = /\d/.test(password);
     const hasUpperCase = /[A-Z]/.test(password);
